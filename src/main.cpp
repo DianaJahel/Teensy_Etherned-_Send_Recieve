@@ -16,26 +16,6 @@ volatile uint32_t ringBufferIsFullCnt = 0;
 
 bool startTCP = false;  // Flag to switch to TCP mode
 
-void PIT_IRQHandler(void)
-{
-     if (PIT_TFLG0 & 0x1)
-    {
-      digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-      PIT_TFLG0 = 1;              
-
-      
-    }
-
-}
-void PIT0_setup(void) {
-    CCM_CCGR1 |= (1 << 23);
-    PIT_MCR = 0x00;
-    PIT_LDVAL0 =  1099999; 
-    PIT_TCTRL0 |= (1 << 1); //  PIT0 interrupt enable
-    PIT_TCTRL0 |= (1 << 0); // PIT0 Timer enable
-    attachInterruptVector(IRQ_PIT, PIT_IRQHandler);
-    NVIC_ENABLE_IRQ(IRQ_PIT);
-}
 
 
 void createDataPacket() {
@@ -57,42 +37,27 @@ void createDataPacket() {
   }
 }
 
-void start_adc_conversion(void) {
-      // Set the next ADC channel and start conversion
-    ADC1_HC0 = (adc_channels[current_channel] & 0xF) | ADC_HC_AIEN;
+void PIT_IRQHandler(void)
+{
+  if (PIT_TFLG0 & 0x1)
+  {
+    PIT_TFLG0 = 1; 
+    createDataPacket();
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 
-}
-
-void ADC1_IRQHandler(void) {
- 
-  if (ADC1_HS & ADC_HS_COCO0) {
-      // Store the conversion result
-      adc_values[current_channel] = ADC1_R0;
-      // Move to the next channel
-      current_channel++;
-      if (current_channel > NUM_CHANNELS) {
-          current_channel = 0;
-          createDataPacket();
-      }
-
-      // Start the next conversion
-      start_adc_conversion();
   }
 
 }
-
-void init_adc1(void) {
-// Enable clock gating for ADC1
-    CCM_CCGR1 |= CCM_CCGR1_ADC1(CCM_CCGR_ON);
-    ADC1_GC = ADC_CFG_AVGS(1); //8 samples avg
-    ADC1_HC0 = adc_channels[0] & 0x3f; //start first conversion
-
-     // Enable ADC interrupts
-    ADC1_HC0 |= ADC_HC_AIEN;
-    attachInterruptVector(IRQ_ADC1, ADC1_IRQHandler);
-    // Enable ADC interrupt in NVIC (Interrupt #57 for ADC1)
-    NVIC_ISER2 |= (1 << (67 - 64)); // 67
-    start_adc_conversion();
+void PIT0_setup(void) {
+    CCM_CCGR1 |= (1 << 23);
+    PIT_MCR = 0x00;
+    PIT_LDVAL0 = 239999; // 239999; 
+    PIT_TCTRL0 |= (1 << 1); //  PIT0 interrupt enable
+    PIT_TCTRL0 |= (1 << 0); // PIT0 Timer enable
+    attachInterruptVector(IRQ_PIT, PIT_IRQHandler);
+    NVIC_SET_PRIORITY(IRQ_PIT, 240);
+    NVIC_ENABLE_IRQ(IRQ_PIT);
+    
 }
 
 // Send IP address and TCP port as a response to CMD_DISCOVERY
@@ -134,7 +99,7 @@ void decodeControlCommands() {
   }
 
   EthernetClient client = TcpServer.available();
-
+  //Serial.print(client);
   if (client) {
     Serial.println("TCP Client connected");
 
@@ -217,8 +182,8 @@ void setup() {
   Serial.begin(9600);
   while (!Serial) { ; }
   initEthernet();
-  init_adc1();
-  //PIT0_setup();
+
+  PIT0_setup();
   pinMode(LED_BUILTIN, OUTPUT);
 }
 
