@@ -5,11 +5,8 @@
 #include "dataTransfer.h"
 #include "commandsDef.h"
 #include "commandRoutines.h"
-
-#define NUM_CHANNELS      3
-const uint32_t adc_channels[NUM_CHANNELS] = {15, 13, 14}; //Pin 20, 22, 23 on board
-volatile uint16_t adc_values[NUM_CHANNELS] = {0};
-volatile uint8_t current_channel = 0;
+#include "adcPart.h"
+#include "WireSensor.h"
 
 
 volatile uint32_t ringBufferIsFullCnt = 0;
@@ -17,32 +14,12 @@ volatile uint32_t ringBufferIsFullCnt = 0;
 bool startTCP = false;  // Flag to switch to TCP mode
 
 
-
-void createDataPacket() {
-  // Generate data and store it in the ring buffer
-  DataPacket packet;
-  packet.dataPackNumber = 1 + writeIndex;  // Increment for unique value
-  packet.radar = 55.2;
-  packet.wireSensorDist = 45;
-  packet.analog1 = 234.3;
-  packet.analog2 = 543;
-  packet.analog3 = 234;
-
-  // Write data to the ring buffer (cast volatile away for assignment)
-  ((DataPacket&)ringBuffer[writeIndex]) = packet;
-  writeIndex = (writeIndex + 1) % NUMBER_OF_BUFFERS;
-
-  if (writeIndex == readIndex) {
-    bufferFull = true;  // Mark the buffer as full
-  }
-}
-
 void PIT_IRQHandler(void)
 {
   if (PIT_TFLG0 & 0x1)
   {
     PIT_TFLG0 = 1; 
-    createDataPacket();
+    
     digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 
   }
@@ -51,7 +28,7 @@ void PIT_IRQHandler(void)
 void PIT0_setup(void) {
     CCM_CCGR1 |= (1 << 23);
     PIT_MCR = 0x00;
-    PIT_LDVAL0 = 239999; // 239999; 
+    PIT_LDVAL0 = 14999999; // 239999;  14999999
     PIT_TCTRL0 |= (1 << 1); //  PIT0 interrupt enable
     PIT_TCTRL0 |= (1 << 0); // PIT0 Timer enable
     attachInterruptVector(IRQ_PIT, PIT_IRQHandler);
@@ -181,10 +158,13 @@ void decodeUdpCommands() {
 void setup() {
   Serial.begin(9600);
   while (!Serial) { ; }
+  sei();
   initEthernet();
-
-  PIT0_setup();
+  init_adc1();
+  //PIT0_setup();
+  interrupts();
   pinMode(LED_BUILTIN, OUTPUT);
+  QTIMER3_C1_C0_setup();
 }
 
 void loop() {

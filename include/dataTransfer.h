@@ -18,13 +18,13 @@ extern unsigned long lastRenewalConnectionTime;
 
 const unsigned long RENEWAL_INTERVALL = 800; //ms
 
-#define NUMBER_OF_BUFFERS 8
+#define NUMBER_OF_BUFFERS 300
 
 struct DataPacket {
   unsigned int dataPackNumber;
   float radar;
-  unsigned int wireSensorDist;
-  float analog1;
+  float wireSensorDist;
+  unsigned int analog1;
   unsigned int analog2;
   unsigned int analog3;
 };

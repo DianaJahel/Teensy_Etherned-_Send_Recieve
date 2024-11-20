@@ -76,6 +76,8 @@ void renewalConnection()
 void dataTransfer() {
 
   if (!dataTransferMode|| !dataReceiver.connected()) {
+    dataTransferMode = false;
+    //Serial.println("TCP client disconnected");
     return;
   }
 
