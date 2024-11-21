@@ -75,7 +75,7 @@ void decodeControlCommands() {
     //_traceNL("decode in datatransfermode");
   }
 
-  EthernetClient client = TcpServer.available();
+  EthernetClient client = TcpServer.accept(); //available();
   //Serial.print(client);
   if (client) {
     Serial.println("TCP Client connected");
@@ -169,7 +169,7 @@ void setup() {
 
 void loop() {
   
-  renewalConnection();
+  //renewalConnection();
   decodeUdpCommands();
   decodeControlCommands();
   dataTransfer();

@@ -18,7 +18,7 @@ extern unsigned long lastRenewalConnectionTime;
 
 const unsigned long RENEWAL_INTERVALL = 800; //ms
 
-#define NUMBER_OF_BUFFERS 300
+#define NUMBER_OF_BUFFERS 1500
 
 struct DataPacket {
   unsigned int dataPackNumber;

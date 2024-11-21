@@ -74,6 +74,8 @@ void renewalConnection()
 }
 
 void dataTransfer() {
+  // if(!dataReceiver.connected())
+  //   Serial.println("TCP client disconnected (Diana)");
 
   if (!dataTransferMode|| !dataReceiver.connected()) {
     dataTransferMode = false;
@@ -82,6 +84,9 @@ void dataTransfer() {
   }
 
   while (readIndex != writeIndex || bufferFull) {
+    if(bufferFull)
+      Serial.println("Data packet sent: buffer full");
+
     // Send data from the ring buffer
     DataPacket packet = ((DataPacket&)ringBuffer[readIndex]);
     dataReceiver.write((uint8_t*)&packet, sizeof(packet));
