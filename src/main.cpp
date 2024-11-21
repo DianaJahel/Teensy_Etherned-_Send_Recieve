@@ -158,13 +158,14 @@ void decodeUdpCommands() {
 void setup() {
   Serial.begin(9600);
   while (!Serial) { ; }
-  sei();
+  //PIT0_setup();
+  //sei();
   initEthernet();
   init_adc1();
-  //PIT0_setup();
+  
   interrupts();
   pinMode(LED_BUILTIN, OUTPUT);
-  QTIMER3_C1_C0_setup();
+  //QTIMER3_C1_C0_setup();
 }
 
 void loop() {
