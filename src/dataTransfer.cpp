@@ -36,42 +36,6 @@ void initEthernet(){
 
 }
 
-unsigned long lastRenewalConnectionTime = 0;
-
-void renewalConnection()
-{
-  unsigned long now = millis();
-  if(now < lastRenewalConnectionTime )
-  {
-    //overflow
-    lastRenewalConnectionTime  = 0;
-  }
-  if( (now-lastRenewalConnectionTime) > RENEWAL_INTERVALL )
-  {
-    lastRenewalConnectionTime = now;
-      
-    byte res = Ethernet.maintain();
-    switch(res)
-    {
-      case 0:
-      //Serial.print("renewal connection, nothing happened");
-      //_traceNL("renewal connection, nothing happened");
-        break;
-      case 1:
-        //_traceNL("renewal failed");
-        break;
-      case 2:
-        //_traceNL("renewal success");
-        break;
-      case 3:
-        //_traceNL("rebind fail");
-        break;
-      case 4:
-        //_traceNL("rebind success");
-        break;
-    }
-  }
-}
 
 void dataTransfer() {
   // if(!dataReceiver.connected())

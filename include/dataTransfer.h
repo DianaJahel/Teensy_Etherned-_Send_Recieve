@@ -18,7 +18,7 @@ extern unsigned long lastRenewalConnectionTime;
 
 const unsigned long RENEWAL_INTERVALL = 800; //ms
 
-#define NUMBER_OF_BUFFERS 1500
+#define NUMBER_OF_BUFFERS 10
 
 struct DataPacket {
   unsigned int dataPackNumber;
@@ -27,6 +27,7 @@ struct DataPacket {
   unsigned int analog1;
   unsigned int analog2;
   unsigned int analog3;
+  //int readwriteDiff;
 };
 
 extern volatile DataPacket ringBuffer[NUMBER_OF_BUFFERS];
@@ -37,7 +38,7 @@ extern volatile bool bufferFull;
 
 void initEthernet();
 void dataTransfer();
-void renewalConnection();
+
 
 
 

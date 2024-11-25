@@ -7,35 +7,18 @@
 #include "commandRoutines.h"
 #include "adcPart.h"
 #include "WireSensor.h"
+#include "radarSensor.h"
 
 
 volatile uint32_t ringBufferIsFullCnt = 0;
 
 bool startTCP = false;  // Flag to switch to TCP mode
+#define GATE_INTERVAL 2000  // microseconds for each gate interval
+#define GATE_ACCUM    100   // number of intervals to accumulate
+#define MULT_FACTOR   5     // multiply to get Hz output
 
 
-void PIT_IRQHandler(void)
-{
-  if (PIT_TFLG0 & 0x1)
-  {
-    PIT_TFLG0 = 1; 
-    
-    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 
-  }
-
-}
-void PIT0_setup(void) {
-    CCM_CCGR1 |= (1 << 23);
-    PIT_MCR = 0x00;
-    PIT_LDVAL0 = 14999999; // 239999;  14999999
-    PIT_TCTRL0 |= (1 << 1); //  PIT0 interrupt enable
-    PIT_TCTRL0 |= (1 << 0); // PIT0 Timer enable
-    attachInterruptVector(IRQ_PIT, PIT_IRQHandler);
-    NVIC_SET_PRIORITY(IRQ_PIT, 240);
-    NVIC_ENABLE_IRQ(IRQ_PIT);
-    
-}
 
 // Send IP address and TCP port as a response to CMD_DISCOVERY
 void sendDiscoveryResponse(IPAddress remoteIP, unsigned int remotePort) {
@@ -158,21 +141,28 @@ void decodeUdpCommands() {
 void setup() {
   Serial.begin(9600);
   while (!Serial) { ; }
-  //PIT0_setup();
+
   //sei();
   initEthernet();
   init_adc1();
   
   interrupts();
   pinMode(LED_BUILTIN, OUTPUT);
-  //QTIMER3_C1_C0_setup();
+  QTIMER3_C1_C0_setup();
+  QTIMER3_C2_setup();
+  analogWriteFrequency(2, 220000);
+  analogWrite(2, 128);
+  //TimerInit_Init();
+  static IntervalTimer t;
+	t.begin(gate_timer, GATE_INTERVAL);
+  
 }
 
 void loop() {
-  
-  //renewalConnection();
+
   decodeUdpCommands();
   decodeControlCommands();
   dataTransfer();
+  delay(10);
 
 }

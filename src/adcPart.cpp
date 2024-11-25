@@ -2,21 +2,32 @@
 #include "adcPart.h"
 #include "dataTransfer.h"
 #include "WireSensor.h"
+#include "radarSensor.h"
 
 #define NUM_CHANNELS      3
 const uint32_t adc_channels[NUM_CHANNELS] = {15, 13, 14}; //Pin 20, 22, 23 on board
 volatile uint16_t adc_values[NUM_CHANNELS] = {0};
 volatile uint8_t current_channel = 0;
 
+volatile int global_packet_nmbr = 0;
 void createDataPacket() {
   // Generate data and store it in the ring buffer
   DataPacket packet;
-  packet.dataPackNumber = 1 + writeIndex;  // Increment for unique value
-  packet.radar = 55.2;
+  packet.dataPackNumber = global_packet_nmbr++;  // Increment for unique value
+
+  if (count_update) {
+    //Serial.printf("%8u\n", count_output * MULT_FACTOR);
+    Freq= count_output * MULT_FACTOR;
+    //Serial.print(Freq);
+    //Serial.println(" Hz ");
+    count_update = false;
+  } 
+  packet.radar = Freq;
   packet.wireSensorDist = read_wire_sensor();
   packet.analog1 = adc_values[0];
   packet.analog2 = adc_values[1];
   packet.analog3 = adc_values[2];
+  //packet.readwriteDiff = readIndex- writeIndex;
 
   // Write data to the ring buffer (cast volatile away for assignment)
   ((DataPacket&)ringBuffer[writeIndex]) = packet;
