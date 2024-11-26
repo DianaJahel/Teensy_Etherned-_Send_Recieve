@@ -45,9 +45,11 @@ void start_adc_conversion(void) {
 }
 
 void ADC1_IRQHandler(void) {
- 
+
+
 
   if (ADC1_HS & ADC_HS_COCO0) {
+
       // Store the conversion result
       adc_values[current_channel] = ADC1_R0;
 

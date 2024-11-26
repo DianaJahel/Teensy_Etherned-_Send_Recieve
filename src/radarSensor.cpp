@@ -7,6 +7,10 @@
 volatile bool count_update = false;
 volatile uint32_t count_output=0;
 
+#define GATE_INTERVAL_RADAR 2000  // microseconds for each gate interval
+#define GATE_ACCUM_RADAR    100   // number of intervals to accumulate
+#define MULT_FACTOR   5     // multiply to get Hz output
+
 float Freq =0;
 unsigned long mycounter= 0;
 
@@ -67,14 +71,12 @@ void QTIMER3_C2_setup(void){  //Frequencimeter Radar sensor
 	// configure the input select register
 	*Radar_counter.inputselectreg = Radar_counter.inputselectval;
 
+  static IntervalTimer pit_timer_radar;
+	pit_timer_radar.begin(gate_timer, GATE_INTERVAL_RADAR); //PIT 0
+
 }
 
-/*void PIT1_setup(void) {
-    PIT_LDVAL1 =  4799; 
-    PIT_TCTRL1 |= (1 << 1); //  PIT0 interrupt enable
-    PIT_TCTRL1 |= (1 << 0); // PIT0 Timer enable
 
-}*/
 
 void QT1_IRQHandler(void){
 
@@ -85,7 +87,7 @@ void QT1_IRQHandler(void){
 
       mycounter++;
       if (mycounter>4000000){
-        digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+        //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
         //Serial.println( mycounter);
           mycounter = 0;
       }
@@ -107,7 +109,7 @@ void QT1_IRQHandler(void){
 
 }
 
-void TimerInit_Init(void){
+/*void TimerInit_Init(void){
   // turn on clock to the specific quad timer (QuadTimer3)
   CCM_CCGR6 |= CCM_CCGR6_QTIMER1(CCM_CCGR_ON);
   TMR1_CTRL0 |= 0x20;
@@ -124,4 +126,4 @@ void TimerInit_Init(void){
   attachInterruptVector(IRQ_QTIMER1, QT1_IRQHandler);
   NVIC_ENABLE_IRQ(IRQ_QTIMER1);
 
-}
+}*/

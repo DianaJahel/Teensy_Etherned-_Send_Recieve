@@ -13,10 +13,11 @@
 volatile uint32_t ringBufferIsFullCnt = 0;
 
 bool startTCP = false;  // Flag to switch to TCP mode
-#define GATE_INTERVAL 2000  // microseconds for each gate interval
-#define GATE_ACCUM    100   // number of intervals to accumulate
-#define MULT_FACTOR   5     // multiply to get Hz output
+static IntervalTimer pit_timer_sendData;
 
+
+#define GATE_INTERVAL_DATA 10000  // microseconds for each gate interval
+#define GATE_ACCUM_DATA    100   // number of intervals to accumulate
 
 
 
@@ -40,6 +41,55 @@ void sendDiscoveryResponse(IPAddress remoteIP, unsigned int remotePort) {
   Serial.println(tcpPort);
 }
 
+void getFreq(){
+    // Buffer to store the received data
+     char mbuffer[4];
+    int bytesRead = 0; // Tracks how many bytes have been read
+
+    // Keep reading until all 4 bytes are received
+    while (bytesRead < 4) {
+        
+      mbuffer[bytesRead] = dataReceiver.read(); // Read one byte
+      Serial.println(mbuffer[bytesRead]);
+      bytesRead++;
+        
+    }
+
+    // Convert the buffer into an integer
+    int receivedValue = 0;
+    memcpy(&receivedValue, mbuffer, sizeof(receivedValue));
+
+    // Print the received value to confirm
+    Serial.print("Received integer value: ");
+    Serial.println(receivedValue);
+
+    // Save the value in a variable for later use
+    int storedValue = receivedValue;
+
+    // Example usage of storedValue
+    Serial.print("Stored value for later use: ");
+    Serial.println(storedValue);
+
+
+}
+
+void modifyFreqCmnd(){
+
+    uint16Data dt0;
+    dt0.value = CMD_FREQUENCY_ACCEPTED;
+    uint16Data dt1;
+    dt1.value = 0;
+    char answBuff[4];
+    answBuff[0] = dt0.array[0];
+    answBuff[1] = dt0.array[1];
+    answBuff[2] = dt1.array[0];
+    answBuff[3] = dt1.array[1];
+    dataReceiver.write(answBuff, sizeof(answBuff));
+    Serial.println("Sent CMD_FREQUENCY_ACCEPTED");
+    getFreq();
+
+    pit_timer_sendData.update(100000); 
+}
 
 unsigned long lastDecodeCmdTime = 0;
 unsigned long commandPollingInteval = 100;//nur in dataTransferMode
@@ -80,8 +130,14 @@ void decodeControlCommands() {
 
         switch (cmdID)
         {
-          case CMD_ECHO:
+        case CMD_ECHO:
           Serial.println("CMD_ECHO");
+          break;
+        case CMD_FREQUENCY:
+          dataReceiver = client;
+          Serial.println("CMD_FREQUENCY");
+          modifyFreqCmnd();
+
           break;
         case CMD_RESET_RADAR_COUNTER:
           Serial.println("CMD_RESET_RADAR_COUNTER");
@@ -114,8 +170,6 @@ void decodeControlCommands() {
 }
 
 
-
-
 void decodeUdpCommands() {
   int packetSize = Udp.parsePacket();
   if (packetSize) {
@@ -136,7 +190,14 @@ void decodeUdpCommands() {
   }
 }
 
+void periodic_data_transfer (){
 
+  decodeUdpCommands();
+  decodeControlCommands();
+  dataTransfer();
+  digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
+
+}
 
 void setup() {
   Serial.begin(9600);
@@ -148,21 +209,22 @@ void setup() {
   
   interrupts();
   pinMode(LED_BUILTIN, OUTPUT);
-  QTIMER3_C1_C0_setup();
-  QTIMER3_C2_setup();
+  QTIMER3_C1_C0_setup(); //Init wire sensor
+  QTIMER3_C2_setup();  //Init Radar sensor
   analogWriteFrequency(2, 220000);
   analogWrite(2, 128);
   //TimerInit_Init();
-  static IntervalTimer t;
-	t.begin(gate_timer, GATE_INTERVAL);
-  
+
+	pit_timer_sendData.begin(periodic_data_transfer, GATE_INTERVAL_DATA); //PIT 1
+
+  //PIT_setup(); //PIT 1
+
+
 }
 
 void loop() {
 
-  decodeUdpCommands();
-  decodeControlCommands();
-  dataTransfer();
-  delay(10);
+
+  //delay(10);
 
 }
