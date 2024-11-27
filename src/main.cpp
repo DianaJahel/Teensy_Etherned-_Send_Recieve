@@ -41,54 +41,34 @@ void sendDiscoveryResponse(IPAddress remoteIP, unsigned int remotePort) {
   Serial.println(tcpPort);
 }
 
-void getFreq(){
-    // Buffer to store the received data
-     char mbuffer[4];
-    int bytesRead = 0; // Tracks how many bytes have been read
-
-    // Keep reading until all 4 bytes are received
-    while (bytesRead < 4) {
-        
-      mbuffer[bytesRead] = dataReceiver.read(); // Read one byte
-      Serial.println(mbuffer[bytesRead]);
-      bytesRead++;
-        
-    }
-
-    // Convert the buffer into an integer
-    int receivedValue = 0;
-    memcpy(&receivedValue, mbuffer, sizeof(receivedValue));
-
-    // Print the received value to confirm
-    Serial.print("Received integer value: ");
-    Serial.println(receivedValue);
-
-    // Save the value in a variable for later use
-    int storedValue = receivedValue;
-
-    // Example usage of storedValue
-    Serial.print("Stored value for later use: ");
-    Serial.println(storedValue);
 
 
-}
+void modifyFreqCmnd(uint8_t Freq_A, uint8_t Freq_B){
 
-void modifyFreqCmnd(){
+  unsigned int result = pow(10, Freq_B);
+  unsigned int New_Freq= Freq_A*result;
+  Serial.println(New_Freq);
 
-    uint16Data dt0;
-    dt0.value = CMD_FREQUENCY_ACCEPTED;
-    uint16Data dt1;
-    dt1.value = 0;
-    char answBuff[4];
-    answBuff[0] = dt0.array[0];
-    answBuff[1] = dt0.array[1];
-    answBuff[2] = dt1.array[0];
-    answBuff[3] = dt1.array[1];
-    dataReceiver.write(answBuff, sizeof(answBuff));
-    Serial.println("Sent CMD_FREQUENCY_ACCEPTED");
-    getFreq();
+  unsigned int conv_fac = pow(10, 6);
+  unsigned long update_time= (conv_fac/New_Freq);
+  Serial.println(update_time);
 
-    pit_timer_sendData.update(100000); 
+  pit_timer_sendData.update(update_time); 
+
+  uint16Data dt0;
+  dt0.value = CMD_FREQUENCY_ACCEPTED;
+  uint16Data dt1;
+  dt1.value = 0;
+  char answBuff[4];
+  answBuff[0] = dt0.array[0];
+  answBuff[1] = dt0.array[1];
+  answBuff[2] = dt1.array[0];
+  answBuff[3] = dt1.array[1];
+  dataReceiver.write(answBuff, sizeof(answBuff));
+  Serial.println("Sent CMD_FREQUENCY_ACCEPTED");
+
+    
+
 }
 
 unsigned long lastDecodeCmdTime = 0;
@@ -126,7 +106,8 @@ void decodeControlCommands() {
         Serial.print("TCP Received cmdID: ");
         Serial.println(cmdID);
         Serial.print("TCP Received cmdSz: ");
-        Serial.println(cmdSz);
+        Serial.println(buffer[2]);
+        Serial.println(buffer[3]);
 
         switch (cmdID)
         {
@@ -136,7 +117,7 @@ void decodeControlCommands() {
         case CMD_FREQUENCY:
           dataReceiver = client;
           Serial.println("CMD_FREQUENCY");
-          modifyFreqCmnd();
+          modifyFreqCmnd(buffer[2],buffer[3]);
 
           break;
         case CMD_RESET_RADAR_COUNTER:
@@ -216,9 +197,6 @@ void setup() {
   //TimerInit_Init();
 
 	pit_timer_sendData.begin(periodic_data_transfer, GATE_INTERVAL_DATA); //PIT 1
-
-  //PIT_setup(); //PIT 1
-
 
 }
 
