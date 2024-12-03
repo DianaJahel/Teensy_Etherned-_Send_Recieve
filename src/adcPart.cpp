@@ -9,6 +9,7 @@ const uint32_t adc_channels[NUM_CHANNELS] = {15, 13, 14}; //Pin 20, 22, 23 on bo
 volatile uint16_t adc_values[NUM_CHANNELS] = {0};
 volatile uint8_t current_channel = 0;
 
+
 volatile int global_packet_nmbr = 0;
 void createDataPacket() {
   // Generate data and store it in the ring buffer
@@ -27,6 +28,7 @@ void createDataPacket() {
   packet.analog1 = adc_values[0];
   packet.analog2 = adc_values[1];
   packet.analog3 = adc_values[2];
+  //packet.meters= total_dist;
   //packet.readwriteDiff = readIndex- writeIndex;
 
   // Write data to the ring buffer (cast volatile away for assignment)
@@ -44,12 +46,13 @@ void start_adc_conversion(void) {
 
 }
 
+
+
 void ADC1_IRQHandler(void) {
 
-
-
   if (ADC1_HS & ADC_HS_COCO0) {
-
+      
+     
       // Store the conversion result
       adc_values[current_channel] = ADC1_R0;
 

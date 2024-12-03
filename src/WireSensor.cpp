@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include "WireSensor.h"
-
+//For the wire sensor a Quad timer was used becuase it can be setup in Quadrature-Count Mode, but this mode reuire at least two channels, one for each Phase.
+//All this could be aso made with the Quadrature decoder (QDC)
 
 float calculo =0.0;
 float wire_dist =0.0;

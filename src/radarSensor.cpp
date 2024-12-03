@@ -3,9 +3,20 @@
 
 #include <Arduino.h>
 #include "radarSensor.h"
+#include "dataTransfer.h"
+
+//Pulses per meter 100 pulses/meter
 
 volatile bool count_update = false;
 volatile uint32_t count_output=0;
+
+
+long curr_dist = 0;
+bool distance_transfer_mode = false;
+
+unsigned int data_pulses= 10;
+#define pulses_per_meter 10.0
+double total_dist= 0.0;
 
 #define GATE_INTERVAL_RADAR 2000  // microseconds for each gate interval
 #define GATE_ACCUM_RADAR    100   // number of intervals to accumulate
@@ -13,6 +24,8 @@ volatile uint32_t count_output=0;
 
 float Freq =0;
 unsigned long mycounter= 0;
+
+
 
 typedef struct {
 	IMXRT_TMR_t *timer;
@@ -25,10 +38,16 @@ typedef struct {
 
 const timerinfo_t Radar_counter = {&IMXRT_TMR3, 2,  14,  1, &IOMUXC_QTIMER3_TIMER2_SELECT_INPUT, 1};
 
+const timerinfo_t distance_counter = {&IMXRT_TMR3, 3,  15,  1, &IOMUXC_QTIMER3_TIMER3_SELECT_INPUT, 1};
 
+uint16_t read_distance_counter() {
+  uint16_t mcount = distance_counter.timer->CH[distance_counter.timerchannel].CNTR;
+  return mcount;
+}
 uint16_t read_radar_counter() {
 	static uint16_t prior = 0;
 	uint16_t count = Radar_counter.timer->CH[Radar_counter.timerchannel].CNTR;
+
 	uint16_t inc = count - prior;
 	prior = count;
 	return inc;
@@ -67,7 +86,7 @@ void QTIMER3_C2_setup(void){  //Frequencimeter Radar sensor
   	// Set the pin's alternate function (ALT1 for Timer3)
   IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B1_02 = 1;  // ALT1: QTIMER3_TIMER1
   // Optionally, configure the pad control register to set the electrical characteristics
-  IOMUXC_SW_PAD_CTL_PAD_GPIO_AD_B1_02 = 0x10B0;  // Example value for pad control (e.g., pull resistors, drive strength, etc.)
+  IOMUXC_SW_PAD_CTL_PAD_GPIO_AD_B1_02 = 0x10B0;  
 	// configure the input select register
 	*Radar_counter.inputselectreg = Radar_counter.inputselectval;
 
@@ -76,54 +95,35 @@ void QTIMER3_C2_setup(void){  //Frequencimeter Radar sensor
 
 }
 
+void GPT1_IRQHandler() {
 
+  if (GPT1_SR & GPT_SR_OF1){
 
-void QT1_IRQHandler(void){
+    GPT1_SR |= GPT_SR_OF1;
+    digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
 
-
-  // Check and clear the interrupt flag
-  if (TMR1_SCTRL0 & (1 << 15)) // Check TCF (Timer Compare Flag)
-  {
-
-      mycounter++;
-      if (mycounter>4000000){
-        //digitalWrite(LED_BUILTIN, !digitalRead(LED_BUILTIN));
-        //Serial.println( mycounter);
-          mycounter = 0;
-      }
-      //Serial.println( mycounter);
-      TMR1_CSCTRL0 &= ~(TMR_CSCTRL_TCF1);  // clear
-
-	  static unsigned int count = 0;
-      static uint32_t accum = 0;
-
-      accum += read_radar_counter();
-      if (++count >= GATE_ACCUM) {
-        count_output = accum;
-        accum = 0;
-        count_update = true;
-        count = 0;
-      }
+    if (distance_transfer_mode){
+        decodeUdpCommands();
+        decodeControlCommands();
+        dataTransfer();
+    }
   }
- 
+  
+}
+
+void GPT1_Init(){
+    // Connect GPS 1PPS signal to pin 25 (EMC_24)
+  IOMUXC_SW_MUX_CTL_PAD_GPIO_AD_B0_13 = 1; // GPT1 Capture1
+  IOMUXC_SW_PAD_CTL_PAD_GPIO_AD_B0_13 = 0x13000; //Pulldown & Hyst
+  CCM_CCGR1 |= CCM_CCGR1_GPT(CCM_CCGR_ON) | CCM_CCGR1_GPT1_SERIAL(CCM_CCGR_ON);
+  GPT1_CR = 0;
+  GPT1_PR = 0;
+  GPT1_SR = 0x3F; // clear all prior status
+  GPT1_IR = GPT_IR_OF1IE;
+  GPT1_CR = GPT_CR_EN | GPT_CR_CLKSRC(3) | GPT_CR_OM1(0) ;
+  GPT1_OCR1 =  data_pulses;
+  attachInterruptVector(IRQ_GPT1, GPT1_IRQHandler);
+  NVIC_ENABLE_IRQ(IRQ_GPT1);
 
 }
 
-/*void TimerInit_Init(void){
-  // turn on clock to the specific quad timer (QuadTimer3)
-  CCM_CCGR6 |= CCM_CCGR6_QTIMER1(CCM_CCGR_ON);
-  TMR1_CTRL0 |= 0x20;
-  TMR1_SCTRL0 |= 0x00;
-  TMR1_LOAD0 = 0x00;
-  TMR1_COMP10 = 938;
-  TMR1_COMP20 = 0x00;
-  TMR1_CMPLD10 = 938;
-  TMR1_CTRL0 |= TMR_CTRL_PCS(0xF) | TMR_CTRL_LENGTH  | TMR_CTRL_CM(0x01);
-  //TMR1_CTRL0 |=TMR_CTRL_DIR;
-  TMR1_CNTR0 = 0x00;
-  TMR1_SCTRL0 |= TMR_SCTRL_TCFIE;
-  TMR1_CSCTRL0 |= 0x41;
-  attachInterruptVector(IRQ_QTIMER1, QT1_IRQHandler);
-  NVIC_ENABLE_IRQ(IRQ_QTIMER1);
-
-}*/

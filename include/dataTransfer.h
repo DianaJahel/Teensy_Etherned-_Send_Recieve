@@ -8,6 +8,7 @@
 #include "staticIPdef.h"
 
 
+static IntervalTimer pit_timer_sendData;
 
 extern EthernetUDP Udp;                                      // UDP instance
 extern EthernetServer TcpServer;                    // TCP server instance
@@ -27,6 +28,7 @@ struct DataPacket {
   unsigned int analog1;
   unsigned int analog2;
   unsigned int analog3;
+  //double meters;
   //int readwriteDiff;
 };
 
@@ -38,6 +40,8 @@ extern volatile bool bufferFull;
 
 void initEthernet();
 void dataTransfer();
+void decodeUdpCommands();
+void decodeControlCommands();
 
 
 
