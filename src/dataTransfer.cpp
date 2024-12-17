@@ -46,17 +46,17 @@ void initEthernet(){
 }
 
 
-void modifyFreqCmnd(uint8_t Freq_A, uint8_t Freq_B){
+void modifyFreqCmnd(uint16_t Freq){
 
-  unsigned int result = pow(10, Freq_B);
-  unsigned int New_Freq= Freq_A*result;
+  //unsigned int result = pow(10, Freq_B);
+  unsigned int New_Freq= Freq;
   Serial.println(New_Freq);
 
   unsigned int conv_fac = pow(10, 6);
   unsigned long update_time= (conv_fac/New_Freq);
   Serial.println(update_time);
   distance_transfer_mode =false;
-  pit_timer_sendData.update(update_time); 
+  pit_timer_sendData.update(update_time); //Update time is period in microseconds
 
   uint16Data dt0;
   dt0.value = CMD_FREQUENCY_ACCEPTED;
@@ -75,10 +75,10 @@ void modifyFreqCmnd(uint8_t Freq_A, uint8_t Freq_B){
 }
 
 
-void modifyDataTransferMode(uint8_t Num_A, uint8_t Num_B){
+void modifyDataTransferMode(uint16_t NumPulses){
 
-  unsigned int result = pow(10, Num_B);
-  unsigned int update_pulses= Num_A*result;
+  //unsigned int result = pow(10, Num_B);
+  unsigned int update_pulses= NumPulses;
   Serial.println(update_pulses);
 
 
@@ -131,13 +131,15 @@ void decodeControlCommands() {
       if (len == 4) {
         // Decode cmdID and cmdSz
         uint16_t cmdID = buffer[0] | (buffer[1] << 8);
-        uint16_t cmdSz = buffer[2] | (buffer[3] << 8);
+        //uint16_t cmdSz = buffer[2] | (buffer[3] << 8);
+        uint16_t data_rec = ((uint16_t)buffer[3] << 8) | buffer[2];
 
         Serial.print("TCP Received cmdID: ");
         Serial.println(cmdID);
         Serial.print("TCP Received cmdSz: ");
-        Serial.println(buffer[2]);
-        Serial.println(buffer[3]);
+        Serial.println(data_rec);
+        //Serial.println(buffer[2]);
+        //Serial.println(buffer[3]);
 
         switch (cmdID)
         {
@@ -147,7 +149,7 @@ void decodeControlCommands() {
         case CMD_FREQUENCY:
           dataReceiver = client;
           Serial.println("CMD_FREQUENCY");
-          modifyFreqCmnd(buffer[2],buffer[3]);
+          modifyFreqCmnd(data_rec);
 
           break;
         case CMD_RESET_RADAR_COUNTER:
@@ -164,7 +166,7 @@ void decodeControlCommands() {
         case CMD_DISTANCE_DATA_TRANSFER:
           dataReceiver = client;
           Serial.println("CMD_DISTANCE_DATA_TRANSFER");
-          modifyDataTransferMode(buffer[2],buffer[3]);
+          modifyDataTransferMode(data_rec);
           break;
         default:
           char strBuff[24];
